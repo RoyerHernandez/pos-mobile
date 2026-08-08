@@ -5,27 +5,47 @@ export async function render(container, [tableId]) {
   container.innerHTML = `
     <header class="app-header">
       <button class="btn-back" id="back-btn">&#8592;</button>
-      <span class="app-title">Cuenta - Mesa ${tableId}</span>
+      <span class="app-title" id="bill-title">Cuenta - Mesa ${tableId}</span>
     </header>
     <main class="bill-main" id="bill-main">
       <p class="loading">Cargando cuenta...</p>
     </main>
+    <div class="toast" id="toast"></div>
   `;
 
   document.getElementById('back-btn').addEventListener('click', () => navigate(`#/mesa/${tableId}`));
 
   try {
     const table = await get(`/tables/${tableId}`);
-    renderBill(container, table, tableId);
+
+    // Update title with table name if available
+    const titleEl = document.getElementById('bill-title');
+    if (titleEl) titleEl.textContent = table.nombre
+      ? `Cuenta - ${table.nombre}`
+      : `Cuenta - Mesa ${tableId}`;
+
+    renderBill(table, tableId);
   } catch (err) {
     document.getElementById('bill-main').innerHTML = `<p class="error">${err.message}</p>`;
   }
 }
 
-function renderBill(container, table, tableId) {
+function renderBill(table, tableId) {
   const items = table.detalles || [];
-  const total = items.reduce((acc, i) => acc + Number(i.subtotal), 0);
   const main = document.getElementById('bill-main');
+
+  if (items.length === 0) {
+    main.innerHTML = `
+      <div class="bill-empty">
+        <p class="empty">Esta mesa no tiene items.</p>
+        <button class="btn-secondary" id="back-to-order">Volver al pedido</button>
+      </div>
+    `;
+    document.getElementById('back-to-order').addEventListener('click', () => navigate(`#/mesa/${tableId}`));
+    return;
+  }
+
+  const total = items.reduce((acc, i) => acc + Number(i.subtotal), 0);
 
   main.innerHTML = `
     <div class="bill-items">
@@ -45,7 +65,7 @@ function renderBill(container, table, tableId) {
       <button class="pay-method" data-method="tarjeta">Tarjeta</button>
       <button class="pay-method" data-method="transferencia">Transferencia</button>
     </div>
-    <button class="btn-charge" id="charge-btn">Cobrar</button>
+    <button class="btn-charge" id="charge-btn">Cobrar $${total.toFixed(2)}</button>
   `;
 
   let selectedMethod = 'efectivo';
@@ -62,13 +82,34 @@ function renderBill(container, table, tableId) {
     const btn = document.getElementById('charge-btn');
     btn.disabled = true;
     btn.textContent = 'Procesando...';
+
     try {
       await put(`/tables/${tableId}/close`, { metodo_pago: selectedMethod, id_cliente: null });
-      navigate('#/mesas');
+      showSuccess();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message);
       btn.disabled = false;
-      btn.textContent = 'Cobrar';
+      btn.textContent = `Cobrar $${total.toFixed(2)}`;
     }
   });
+}
+
+function showSuccess() {
+  const main = document.getElementById('bill-main');
+  main.innerHTML = `
+    <div class="bill-success">
+      <span class="bill-success-icon">&#10003;</span>
+      <p class="bill-success-text">Pago registrado</p>
+      <p class="bill-success-sub">Volviendo a las mesas...</p>
+    </div>
+  `;
+  setTimeout(() => navigate('#/mesas'), 1800);
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('toast-visible');
+  setTimeout(() => toast.classList.remove('toast-visible'), 3500);
 }
