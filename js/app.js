@@ -1,9 +1,12 @@
 import { getToken } from './api.js';
 
+// Routes that require authentication
+const AUTH_ROUTES = new Set(['#/mesas', '#/mesa/:id', '#/mesa/:id/cuenta']);
+
 const routes = {
-  '#/login':        () => import('./views/login.js'),
-  '#/mesas':        () => import('./views/mesas.js'),
-  '#/mesa/:id':     () => import('./views/order.js'),
+  '#/login':           () => import('./views/login.js'),
+  '#/mesas':           () => import('./views/mesas.js'),
+  '#/mesa/:id':        () => import('./views/order.js'),
   '#/mesa/:id/cuenta': () => import('./views/bill.js'),
 };
 
@@ -15,9 +18,13 @@ function matchRoute(hash) {
   for (const pattern of Object.keys(routes)) {
     const regex = new RegExp('^' + pattern.replace(/:id/g, '([^/]+)') + '$');
     const match = hash.match(regex);
-    if (match) return { loader: routes[pattern], params: match.slice(1) };
+    if (match) return { loader: routes[pattern], params: match.slice(1), pattern };
   }
   return null;
+}
+
+function requiresAuth(pattern) {
+  return AUTH_ROUTES.has(pattern);
 }
 
 async function render() {
@@ -25,8 +32,21 @@ async function render() {
   const app = document.getElementById('app');
 
   const matched = matchRoute(hash);
+
   if (!matched) {
     navigate(getToken() ? '#/mesas' : '#/login');
+    return;
+  }
+
+  // Guard: redirect to login if route requires auth and no token
+  if (requiresAuth(matched.pattern) && !getToken()) {
+    navigate('#/login');
+    return;
+  }
+
+  // Guard: redirect to mesas if already authenticated and going to login
+  if (matched.pattern === '#/login' && getToken()) {
+    navigate('#/mesas');
     return;
   }
 
