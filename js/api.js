@@ -1,4 +1,4 @@
-export const API_BASE = 'http://localhost:8080/api/pos/v1';
+export const API_BASE = 'http://localhost:8081/api/pos/v1';
 
 const TOKEN_KEY = 'pos_access_token';
 const REFRESH_KEY = 'pos_refresh_token';
