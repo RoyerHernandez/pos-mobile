@@ -1,4 +1,11 @@
-export const API_BASE = 'http://localhost:8081/api/pos/v1';
+const API_URLS = {
+  local:      'http://localhost:8081/api/pos/v1',
+  production: 'https://REEMPLAZAR_CON_URL_PRODUCCION/api/pos/v1',
+};
+
+export const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? API_URLS.local
+  : API_URLS.production;
 
 const TOKEN_KEY = 'pos_access_token';
 const REFRESH_KEY = 'pos_refresh_token';
