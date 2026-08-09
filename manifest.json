@@ -2,7 +2,7 @@
   "name": "POS Callejon",
   "short_name": "POS",
   "description": "Table management for POS Callejon",
-  "start_url": "/",
+  "start_url": "/pos-mobile/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1a1a2e",
